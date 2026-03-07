@@ -1,10 +1,13 @@
+#Geovan Yassil Perez Encarnacion
+
+
 import pygame
 import sys
 from scripts.mapa import MAP_DATA, TAMANO_CELDA
 
 def test_mapa():
     pygame.init()
-    # aqui hice una ventana normal, no pantalla completa aún
+    # Aqui hice una ventana normal, no pantalla completa aún
     pantalla = pygame.display.set_mode((1280, 720))
     reloj = pygame.time.Clock()
     
