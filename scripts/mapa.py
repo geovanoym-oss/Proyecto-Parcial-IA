@@ -1,4 +1,7 @@
-# scripts/map.py
+# Nombre: Geovan Yassil Perez Encarnacion
+# Matricula: 24-EISN-2-037
+
+ # scripts/map.py
 TAMANO_CELDA = 64 
 
 MAP_DATA = [
