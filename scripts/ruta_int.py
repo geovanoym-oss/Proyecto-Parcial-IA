@@ -1,3 +1,6 @@
+# Nombre: Geovan Yassil Perez Encarnacion
+# Matricula: 24-EISN-2-037
+
 import heapq
 
 def a_star(mapa, inicio, fin):
