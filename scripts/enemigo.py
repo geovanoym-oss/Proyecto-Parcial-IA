@@ -13,7 +13,7 @@ class Enemigo:
         self.pasos = 0
         self.bloqueado = 0
         try:
-            self.imagen = pygame.image.load("").convert_alpha()
+            self.imagen = pygame.image.load("assets/images/dron.png").convert_alpha()
             self.imagen = pygame.transform.scale(self.imagen, (64, 64))
         except: self.imagen = None
 
