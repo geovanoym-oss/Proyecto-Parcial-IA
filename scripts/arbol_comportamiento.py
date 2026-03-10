@@ -40,7 +40,7 @@ class JugadorCerca(Nodo):
 class AccionPerseguir(Nodo):
     def ejecutar(self):
         return "PERSEGUIR"
-
+    
 # Nodo de la Accion de Patrullar
 
 class AccionPatrullar(Nodo):

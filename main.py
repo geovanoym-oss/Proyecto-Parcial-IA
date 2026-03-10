@@ -15,12 +15,18 @@ class JuegoRescate:
         self.ancho, self.alto = self.pantalla.get_size()
         pygame.display.set_caption("Sistema de Rescate IA - Geovan Perez")
         
+        #SOPORTE PARA GAMEPAD ( Haber si me gano esos Puntos Extra )
+        self.mando = None
+        if pygame.joystick.get_count() > 0:
+            self.mando = pygame.joystick.Joystick(0)
+            self.mando.init()
+        
         # Las imagenes del juego
         self.img_muro = self.cargar_grafico("assets/images/muro.png")
         self.img_persona = self.cargar_grafico("assets/images/persona.png")
         self.img_zona = self.cargar_grafico("assets/images/zona segura.png")
         
-        # FONDO PARA EL MENU
+        # FONDO PARA EL MENU 
         try:
             self.img_fondo = pygame.image.load("assets/images/fondo_menu.png").convert()
             self.img_fondo = pygame.transform.scale(self.img_fondo, (self.ancho, self.alto))
@@ -76,8 +82,8 @@ class JuegoRescate:
         while True:
             self.pantalla.fill(color)
             t1 = self.fuente_tit.render(titulo, True, (255,255,255))
-            t2 = self.fuente_ui.render("1. " + sub, True, (200,200,200))
-            t3 = self.fuente_ui.render("2. SALIR", True, (200,200,200))
+            t2 = self.fuente_ui.render("1 o [A/X]. " + sub, True, (200,200,200))
+            t3 = self.fuente_ui.render("2 o [B/O]. SALIR", True, (200,200,200))
             self.pantalla.blit(t1, (self.ancho//2-t1.get_width()//2, self.alto//3))
             self.pantalla.blit(t2, (self.ancho//2-t2.get_width()//2, self.alto//2))
             self.pantalla.blit(t3, (self.ancho//2-t3.get_width()//2, self.alto//2 + 60))
@@ -88,17 +94,42 @@ class JuegoRescate:
                         pygame.mixer.music.play(-1)
                         return
                     if e.key == pygame.K_2: pygame.quit(); sys.exit()
+                # Control por Gamepad para menus
+                if e.type == pygame.JOYBUTTONDOWN:
+                    if e.button == 0: # Boton A o X
+                        pygame.mixer.music.play(-1)
+                        return
+                    if e.button == 1: # Boton B o Círculo
+                        pygame.quit(); sys.exit()
 
     def jugar(self):
         for e in pygame.event.get():
             if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+            
+            #  ENTRADAS DE TECLADO
             if e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE: self.ventana_interactiva("PAUSA", "CONTINUAR", (40,40,80))
                 if e.key in [pygame.K_w, pygame.K_UP]: self.protagonista.mover(0, -1)
                 if e.key in [pygame.K_s, pygame.K_DOWN]: self.protagonista.mover(0, 1)
                 if e.key in [pygame.K_a, pygame.K_LEFT]: self.protagonista.mover(-1, 0)
                 if e.key in [pygame.K_d, pygame.K_RIGHT]: self.protagonista.mover(1, 0)
+                
+                # RECOGER CON TECLA 'E'
+                if e.key == pygame.K_e:
+                    self.intentar_recoger()
 
+            # ENTRADAS DEL CONTROL
+            if e.type == pygame.JOYBUTTONDOWN:
+                if e.button == 0: # Boton A / X para RECOGER
+                    self.intentar_recoger()
+                if e.button == 7: # Boton Start para PAUSA
+                    self.ventana_interactiva("PAUSA", "CONTINUAR", (40,40,80))
+            
+            if e.type == pygame.JOYHATMOTION: # Movimiento con la cruz (D-Pad)
+                dx, dy = e.value
+                self.protagonista.mover(dx, -dy)
+
+        # Logica de enemigos e IA
         for ene in self.enemigos:
             ene.actualizar(self.protagonista.pos, self.mapa_actual)
             if list(self.protagonista.pos) == list(ene.posicion):
@@ -106,11 +137,8 @@ class JuegoRescate:
                 self.reiniciar()
                 return
 
+        # Entrega automatica en zona segura
         rx, ry = self.protagonista.pos
-        if self.mapa_actual[ry][rx] == 2 and self.inventario < 1:
-            self.mapa_actual[ry][rx] = 0
-            self.inventario = 1
-        
         if self.mapa_actual[ry][rx] == 3 and self.inventario > 0:
             self.puntos += 1
             self.inventario = 0
@@ -119,6 +147,13 @@ class JuegoRescate:
                 self.reiniciar()
                 return
         self.dibujar()
+
+    def intentar_recoger(self):
+        # Funcion separada para recoger sobrevivientes con E o Gamepad
+        rx, ry = self.protagonista.pos
+        if self.mapa_actual[ry][rx] == 2 and self.inventario < 1:
+            self.mapa_actual[ry][rx] = 0
+            self.inventario = 1
 
     def dibujar(self):
          # Dibujo mapa, jugador y enemigos
@@ -139,39 +174,43 @@ class JuegoRescate:
         self.protagonista.dibujar(self.pantalla, TAMANO_CELDA)
         for ene in self.enemigos: ene.dibujar(self.pantalla, TAMANO_CELDA)
         
+        # UI actualizada con instrucciones
         txt = f"RESCATADOS: {self.puntos} | CARGADO: {'SÍ' if self.inventario else 'NO'}"
-        self.pantalla.blit(self.fuente_ui.render(txt, True, (255,255,255)), (20, self.alto - 50))
+        instruccion = "[E] o Botón (A) para RESCATAR"
+        self.pantalla.blit(self.fuente_ui.render(txt, True, (255,255,255)), (20, self.alto - 80))
+        self.pantalla.blit(self.fuente_ui.render(instruccion, True, (255,200,0)), (20, self.alto - 45))
         pygame.display.flip()
 
     def ejecutar(self):
         while True:
             if self.estado == "MENU":
-                # Dibujamos el fondo si existe, si no, pantalla negra
                 if self.img_fondo:
                     self.pantalla.blit(self.img_fondo, (0, 0))
                 else:
                     self.pantalla.fill((0,0,0))
                 
-                # Sombra para que se vea mejor
                 titulo_texto = "Rescate Inteligente: Robot Explorador"
-                subtitulo_texto = "OPRIMIR EL ESPACIO PARA COMENZAR"
+                subtitulo_texto = "ESPACIO o START PARA COMENZAR"
                 
                 m1_sombra = self.fuente_tit.render(titulo_texto, True, (0,0,0))
                 m1 = self.fuente_tit.render(titulo_texto, True, (255,255,255))
                 m2 = self.fuente_ui.render(subtitulo_texto, True, (200,200,200))
                 
-                # Posicion de los textos
                 self.pantalla.blit(m1_sombra, (self.ancho//2-m1.get_width()//2 + 2, self.alto//2-50 + 2))
                 self.pantalla.blit(m1, (self.ancho//2-m1.get_width()//2, self.alto//2-50))
                 self.pantalla.blit(m2, (self.ancho//2-m2.get_width()//2, self.alto//2+30))
                 
                 pygame.display.flip()
                 for e in pygame.event.get():
-                    if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE: self.estado = "JUGANDO"
                     if e.type == pygame.QUIT: pygame.quit(); sys.exit()
+                    # Iniciar con Teclado
+                    if e.type == pygame.KEYDOWN and e.key == pygame.K_SPACE: 
+                        self.estado = "JUGANDO"
+                    # Iniciar con Gamepad
+                    if e.type == pygame.JOYBUTTONDOWN and e.button == 7: 
+                        self.estado = "JUGANDO"
             else: self.jugar()
             self.reloj.tick(15)
 
 if __name__ == "__main__":
     JuegoRescate().ejecutar()
-
